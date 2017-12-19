@@ -95,7 +95,8 @@ type prob struct {
 
 // Prob represens optimization problem. Use glpk.New() to create a new problem.
 type Prob struct {
-	p *prob
+	p          *prob
+	isInterior bool
 }
 
 func finalizeProb(p *prob) {
@@ -109,7 +110,7 @@ func finalizeProb(p *prob) {
 func New() *Prob {
 	p := &prob{C.glp_create_prob()}
 	runtime.SetFinalizer(p, finalizeProb)
-	return &Prob{p}
+	return &Prob{p, false}
 }
 
 // Delete deletes a problem.  Calling Delete on a deleted problem will
@@ -298,7 +299,7 @@ func (p *Prob) Copy(names bool) *Prob {
 	if p.p.p == nil {
 		panic("Prob method called on a deleted problem")
 	}
-	q := &Prob{&prob{C.glp_create_prob()}}
+	q := &Prob{&prob{C.glp_create_prob()}, false}
 	var names_ C.int
 	if names {
 		names_ = C.GLP_ON
@@ -639,6 +640,33 @@ func (p *Prob) Exact(parm *Smcp) error {
 	return err
 }
 
+func (p *Prob) Interior(parm *Iptcp) error {
+	if p.p.p == nil {
+		panic("Prob method called on a deleted problem")
+	}
+	var err OptError
+	if parm != nil {
+		err = OptError(C.glp_interior(p.p.p, &parm.iptcp))
+	} else {
+		err = OptError(C.glp_interior(p.p.p, nil))
+	}
+	if err == 0 {
+		p.isInterior = true
+		return nil
+	}
+	return err
+}
+
+type Iptcp struct {
+	iptcp C.glp_iptcp
+}
+
+func NewIptcp() *Iptcp {
+	i := new(Iptcp)
+	C.glp_init_iptcp(&i.iptcp)
+	return i
+}
+
 // Smcp represents simplex solver control parameters, a set of
 // parameters for Prob.Simplex() and Prob.Exact(). Please use
 // NewSmcp() to create Smtp structure which is properly initialized.
@@ -680,6 +708,10 @@ const (
 // (default: glpk.MSG_ALL).
 func (s *Smcp) SetMsgLev(lev MsgLev) {
 	s.smcp.msg_lev = C.int(lev)
+}
+
+func (i *Iptcp) SetMsgLev(lev MsgLev) {
+	i.iptcp.msg_lev = C.int(lev)
 }
 
 // Simplex method option
@@ -760,6 +792,9 @@ func (p *Prob) Status() SolStat {
 	if p.p.p == nil {
 		panic("Prob method called on a deleted problem")
 	}
+	if p.isInterior {
+		return SolStat(C.glp_ipt_status(p.p.p))
+	}
 	return SolStat(C.glp_get_status(p.p.p))
 }
 
@@ -783,6 +818,9 @@ func (p *Prob) DualStat() SolStat {
 func (p *Prob) ObjVal() float64 {
 	if p.p.p == nil {
 		panic("Prob method called on a deleted problem")
+	}
+	if(p.isInterior){
+		return float64(C.glp_ipt_obj_val(p.p.p))
 	}
 	return float64(C.glp_get_obj_val(p.p.p))
 }
@@ -813,6 +851,10 @@ func (p *Prob) ColStat(j int) VarStat {
 func (p *Prob) ColPrim(j int) float64 {
 	if p.p.p == nil {
 		panic("Prob method called on a deleted problem")
+	}
+	if (p.isInterior) {
+		return float64(C.glp_ipt_col_prim(p.p.p, C.int(j)))
+
 	}
 	return float64(C.glp_get_col_prim(p.p.p, C.int(j)))
 }

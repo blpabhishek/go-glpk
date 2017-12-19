@@ -309,7 +309,14 @@ func CheckClose(t *testing.T, v1, v2 float64) {
 	}
 }
 
+func CheckIptClose(t *testing.T, v1, v2 float64) {
+	if math.Abs(v1-v2) > 1e-4 {
+		t.Errorf("values %g and %g differ by %g", v1, v2, v1-v2)
+	}
+}
+
 func CheckSolution(t *testing.T, lp *Prob) {
+
 	if lp.Status() != OPT {
 		t.Errorf("expected optimal solution, but got %d", lp.Status())
 	}
@@ -324,6 +331,18 @@ func CheckSolution(t *testing.T, lp *Prob) {
 	CheckClose(t, lp.ColPrim(1), 33+1.0/3)
 	CheckClose(t, lp.ColPrim(2), 66+2.0/3)
 	CheckClose(t, lp.ColPrim(3), 0)
+}
+
+func CheckIptSolution(t *testing.T, lp *Prob) {
+
+	if lp.Status() != OPT {
+		t.Errorf("expected optimal solution, but got %d", lp.Status())
+	}
+
+	CheckIptClose(t, lp.ObjVal(), 733+1.0/3)
+	CheckIptClose(t, lp.ColPrim(1), 33+1.0/3)
+	CheckIptClose(t, lp.ColPrim(2), 66+2.0/3)
+	CheckIptClose(t, lp.ColPrim(3), 0)
 }
 
 // PrepareTestExample is a Go rewrite of the PyGLPK example from
@@ -378,6 +397,16 @@ func CheckSimplexSolution(t *testing.T, lp *Prob) {
 		t.Errorf("Simplex error: %v", err)
 	}
 	CheckSolution(t, lp)
+}
+
+func CheckInteriorPointSolution(t *testing.T, lp *Prob) {
+	iptcp := NewIptcp()
+	iptcp.SetMsgLev(MSG_ERR)
+
+	if err := lp.Interior(iptcp); err != nil {
+		t.Errorf("Interior error: %v", err)
+	}
+	CheckIptSolution(t, lp)
 }
 
 func TestExample(t *testing.T) {
@@ -504,6 +533,13 @@ func TestSetGetColKind(t *testing.T) {
 	}
 	lp.Delete()
 
+}
+
+func TestInteriorPoint(t *testing.T){
+	lp := PrepareTestExample(t)
+
+	CheckInteriorPointSolution(t, lp)
+	lp.Delete()
 }
 
 func TestIocp(t *testing.T) {
