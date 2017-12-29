@@ -106,10 +106,13 @@ func finalizeProb(p *prob) {
 	}
 }
 
+func finalizeProbWithOutDeletingProb(p *prob) {
+	p.p = nil
+}
 // New creates a new optimization problem.
 func New() *Prob {
 	p := &prob{C.glp_create_prob()}
-	runtime.SetFinalizer(p, finalizeProb)
+	runtime.SetFinalizer(p, finalizeProbWithOutDeletingProb)
 	return &Prob{p, false}
 }
 
