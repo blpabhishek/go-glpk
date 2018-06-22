@@ -686,6 +686,8 @@ func NewSmcp() *Smcp {
 // Message level
 type MsgLev int
 
+type OrdAlg int
+
 const (
 	// Message levels (default: glpk.MSG_ALL). Usage example:
 	//
@@ -702,6 +704,11 @@ const (
 	MSG_ON  = MsgLev(C.GLP_MSG_ON)  // normal output
 	MSG_ALL = MsgLev(C.GLP_MSG_ALL) // full output
 	MSG_DBG = MsgLev(C.GLP_MSG_DBG) // debug output
+
+	GLP_ORD_NONE = OrdAlg(C.GLP_ORD_NONE) // natural (original) ordering 
+	GLP_ORD_QMD = OrdAlg(C.GLP_ORD_QMD)  /* quotient minimum degree (QMD) */
+	GLP_ORD_AMD = OrdAlg(C.GLP_ORD_AMD) /* approx. minimum degree (AMD) */
+	GLP_ORD_SYMAMD = OrdAlg(C.GLP_ORD_SYMAMD)  /* approx. minimum degree (SYMAMD) */
 )
 
 // SetMsgLev sets message level displayed by the optimization function
@@ -712,6 +719,10 @@ func (s *Smcp) SetMsgLev(lev MsgLev) {
 
 func (i *Iptcp) SetMsgLev(lev MsgLev) {
 	i.iptcp.msg_lev = C.int(lev)
+}
+
+func (i *Iptcp) SetOrdAlg(lev OrdAlg) {
+	i.iptcp.ord_alg = C.int(lev)
 }
 
 // Simplex method option
