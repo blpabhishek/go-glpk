@@ -528,6 +528,14 @@ func (p *Prob) SetColStat(j int, stat VarStat) {
 // glp_adv_basis
 // glp_cpx_basis
 
+type SimplexBasis int // basis type enum
+
+const (
+	STD = SimplexBasis(1) // standard basis
+	ADV = SimplexBasis(2) // advanced basis
+	CPX = SimplexBasis(3) // Bixby basis
+)
+
 // Optimization Error
 type OptError int
 
@@ -797,6 +805,27 @@ const (
 func (s *Smcp) SetRTest(r_test RTest) {
 	s.smcp.r_test = C.int(r_test)
 }
+
+// Enables or disables the optional Simplex presolver.
+func (p *Smcp) SetSimplexPresolve(on bool) {
+	if on {
+		p.smcp.presolve = C.GLP_ON
+	} else {
+		p.smcp.presolve = C.GLP_OFF
+	}
+}
+
+// enables advanced basis
+func (p *Prob) SetSimplexBasis(basis SimplexBasis) {
+	if basis == 1 {
+		C.glp_std_basis(p.p.p)
+	} else if basis == 2 {
+		C.glp_adv_basis(p.p.p, 0)
+	} else {
+		C.glp_cpx_basis(p.p.p)
+	}
+}
+
 
 // Status returns status of the basic solution.
 func (p *Prob) Status() SolStat {
